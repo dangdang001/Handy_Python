@@ -1,0 +1,9 @@
+# Situation: apply function to each row of df and save output as new column(s)
+
+## function returning single value  
+   df[['col_1']] = df.apply(lambda row: my_fun(row['var1'], row['var2'], ...), axis = 1)
+
+## function returning multiple values (myfun return values in tuple, e.g., return x, y)
+df[['col_1','col_2']] = df.apply(lambda row: my_fun(row['var1'], row['var2'], ...), axis = 1, result_type = 'expand')
+
+
