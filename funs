@@ -1,0 +1,32 @@
+# function to print frequency tables for a list of categorical variables
+def cat_table(df, cat_list):
+    '''
+    Input:
+    df: data frame
+    cat_list: a list of categorical variables 
+
+    Output:
+    A dataframe contain the frequency tables for all variables in cat_list
+    '''
+    res = pd.DataFrame()
+    for cat in cat_list:
+        temp = df.groupby(by=[cat]).size().to_frame().reset_index().rename(columns={0:'N', cat:'Level'}) \
+              .sort_values(by = ['N'], ascending = [False])
+        temp['Percentage']=temp['N']*100/float(temp['N'].sum())
+        temp['Variable'] = cat
+        temp = temp [['Variable', 'Level', 'N', 'Percentage']]
+        res = res.append(temp)    
+    return res
+
+# function to display frequency table
+def freq_table(data, col, cut_off = None):
+    freq=data.groupby(col).size().to_frame().rename(columns={0:'Frequency'})
+    freq_tab=freq.groupby('Frequency').size().to_frame().reset_index().rename(columns={0:'Count'})
+    if cut_off:
+        freq_tab.loc[freq_tab['Frequency']>=cut_off, 'Frequency'] = '>=' + str(cut_off)
+        freq_tab = freq_tab.groupby('Frequency')['Count'].sum().to_frame()
+    freq_tab['Percentage']=freq_tab.apply(lambda x: x*100/float(x.sum()))
+    freq_tab = freq_tab.append(pd.DataFrame({'Frequency':'Total', 'Count': freq_tab['Count'].sum(axis=0), 'Percentage':freq_tab['Percentage'].sum(axis=0)},index=[0]).set_index('Frequency'))
+    freq_tab.index.name = 'Frequency'
+    return freq_tab
+    
