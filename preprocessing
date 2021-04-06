@@ -14,20 +14,11 @@ df_aware['gender_regroup'] = np.select([df['gender']=='female',
 
 # 2. Replacement/Annotation
 
-# replace None with 'missing'
+## replace None with 'missing'
 df = df.replace(np.nan, 'missing', regex=True)
 
-
-# replace from dictionary 
-
-## age_bucket dictionary
-age_bucket_label = {0:'0-12', 1:'13-17', 2:'18-20', 3:'21-24', 4:'25-34', 5:'35-44', 6:'45-49', 7:'50-54', 8:'55-64', 9:'65 or above'}
-
-## user_state dictionary
+## replace from dictionary 
 user_state_label = {0:'Dormant', 1:'Resurrected', 2:'New', 3:'Marginal', 4:'Casual', 5:'Core'}
-
-
-df.age_bucket = df.age_bucket.replace(age_bucket_label)
 df.user_state = df.user_state.replace(user_state_label)
 
 # 3. Splitting 
