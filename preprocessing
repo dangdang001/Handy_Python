@@ -1,0 +1,31 @@
+# 1. regrouping 
+ 
+df['group'] = np.where(df['is_treatment']==True,'Treatment','Control')
+
+df['age_bucket'] = np.select([df['age']<=17, 
+                             (df['age']>=18) & (df['age']<=24),
+                             (df['age']>=25) & (df['age']<=44),
+                             (df['age']>=45) & (df['age']<=54),
+                             df_['age_bucket']>=55], ['0-17','18-24','25-44','45-54','55 or above'])
+
+df_aware['gender_regroup'] = np.select([df['gender']=='female',
+                                        df['gender']=='male'],
+                                        ['Female','Male'], default='Unspecified/Missing')
+
+# 2. Replacing
+
+# replace None with 'missing'
+df = df.replace(np.nan, 'missing', regex=True)
+
+
+# replace from dictionary 
+
+## age_bucket dictionary
+age_bucket_label = {0:'0-12', 1:'13-17', 2:'18-20', 3:'21-24', 4:'25-34', 5:'35-44', 6:'45-49', 7:'50-54', 8:'55-64', 9:'65 or above'}
+
+## user_state dictionary
+user_state_label = {0:'Dormant', 1:'Resurrected', 2:'New', 3:'Marginal', 4:'Casual', 5:'Core'}
+
+
+df.age_bucket = df.age_bucket.replace(age_bucket_label)
+df.user_state = df.user_state.replace(user_state_label)
