@@ -1,4 +1,4 @@
-# 1. regrouping 
+# 1. Regrouping
  
 df['group'] = np.where(df['is_treatment']==True,'Treatment','Control')
 
@@ -12,7 +12,7 @@ df_aware['gender_regroup'] = np.select([df['gender']=='female',
                                         df['gender']=='male'],
                                         ['Female','Male'], default='Unspecified/Missing')
 
-# 2. Replacing
+# 2. Replacement/Annotation
 
 # replace None with 'missing'
 df = df.replace(np.nan, 'missing', regex=True)
@@ -29,3 +29,48 @@ user_state_label = {0:'Dormant', 1:'Resurrected', 2:'New', 3:'Marginal', 4:'Casu
 
 df.age_bucket = df.age_bucket.replace(age_bucket_label)
 df.user_state = df.user_state.replace(user_state_label)
+
+# 3. Splitting 
+
+df['second_word'] = df.words.str.split('-').str[1]
+
+# 4. Date
+
+## transform dt to pd datetime type
+df['date'] = pd.to_datetime(df['date'])
+
+# 5. Filtering
+
+df = df[~(df['col'].isnull())]
+
+# 6. Deduplication 
+
+## 1) Pure duplication with same keys adv_id + execution_date + start_date + end_date + report_type; keep the most recent ones
+
+df = df.sort_values(by=['adv_id', 'execution_date', 'start_date', 'end_date', 'report_type']).reset_index(drop=True)
+df_dedup = df.drop_duplicates(subset = ['adv_id', 'execution_date', 'start_date', 'end_date', 'report_type'], keep='last')
+
+## 2) Duplications within 2 week of execution date: adv_id + report_type; keep the most recent ones
+
+df_dedup = df_dedup.sort_values(by=['adv_id', 'report_type', 'execution_date']).reset_index(drop=True)
+
+### create session ids for each set of reports with same adv_id + report_type, depending the 1-step lag difference in execution_date
+### if diff_date < = 14: same session; else new session
+df_dedup['session_id'] = df_dedup.groupby(['adv_id', 'report_type']).execution_date.apply(lambda x: (x.diff()/ np.timedelta64(1, 'D') > 14).cumsum())
+
+### for each session within each set of reports with same adv_id + report_type, only keep the most recent record
+df_dedup2 = df_dedup.groupby(['adv_id', 'report_type', 'session_id']).tail(1)
+
+# 7. Sequence
+
+## sequence of reports
+
+### merge reports happend on the same execution date
+df = df.sort_values(by=['adv_id', 'execution_date', 'start_date', 'end_date', 'report_type']).reset_index(drop=True)
+df_same_day_merged = df.groupby(by = ['adv_id', 'execution_date'])['report_type'].agg(lambda x: ''.join(x)).reset_index()
+
+### define advertiser exposure to PCA sequence
+df_same_day_merged = df_same_day_merged.sort_values(by=['adv_id', 'execution_date']).reset_index(drop=True) 
+df_seq = df_same_day_merged.groupby(by = ['adv_id'])['report_type'].agg(lambda x: '->'.join(x)).reset_index().rename(columns = {'report_type':'sequence'})
+
+
