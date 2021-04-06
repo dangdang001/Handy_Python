@@ -1,0 +1,14 @@
+# 1. Histogram / Cumulative Histogram
+
+sns.set(style="whitegrid", font_scale=1)
+fig = plt.figure(figsize=(4,4), dpi=200)   
+
+plt.title('OVERALL (n=' + str(df.shape[0]) + ')') 
+# ax = sns.distplot(df["col"],kde = False) # Histogram
+ax = sns.distplot(df["col"], hist_kws={'cumulative': True}, kde_kws={'cumulative': True}, bins=10) # Cumulative Histogram
+ax.set(ylabel='', xlabel='')
+ax.set(xlim=(0, 1.05))
+plt.xticks([0, 0.2, 0.4, 0.6, 0.8, 1.0])
+
+
+
