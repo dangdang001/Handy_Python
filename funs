@@ -18,9 +18,18 @@ def cat_table(df, cat_list):
         res = res.append(temp)    
     return res
 
-# function to display frequency table
-def freq_table(data, col, cut_off = None):
-    freq=data.groupby(col).size().to_frame().rename(columns={0:'Frequency'})
+# function to print frequency of frequency: number of occurrence 
+def freq_table(df, col, cut_off = None):
+    '''
+    Input:
+    df: data frame
+    col: name of the column to be counted, e.g., ids
+    cut_off: category above cut_off will be merged as displayed as ">=cut_off"
+
+    Output:
+    A dataframe contain the frequency table for number of occurrence of col
+    '''
+    freq=df.groupby(col).size().to_frame().rename(columns={0:'Frequency'})
     freq_tab=freq.groupby('Frequency').size().to_frame().reset_index().rename(columns={0:'Count'})
     if cut_off:
         freq_tab.loc[freq_tab['Frequency']>=cut_off, 'Frequency'] = '>=' + str(cut_off)
@@ -29,4 +38,3 @@ def freq_table(data, col, cut_off = None):
     freq_tab = freq_tab.append(pd.DataFrame({'Frequency':'Total', 'Count': freq_tab['Count'].sum(axis=0), 'Percentage':freq_tab['Percentage'].sum(axis=0)},index=[0]).set_index('Frequency'))
     freq_tab.index.name = 'Frequency'
     return freq_tab
-    
