@@ -1,0 +1,46 @@
+# permutation test for equavelence of two sample mean (simulated)
+
+def permutation_test_mean_diff(df, test, ctrl, alternative='two-sided', iteration=2000):
+    
+    diff = []
+    test_mean = df[test].mean()  
+    ctrl_mean = df[ctrl].mean()
+    diff_observed = test_mean - ctrl_mean
+    pool = pd.concat([pd.Series(df[test]), pd.Series(df[ctrl])]).values
+    for i in range(iteration):
+        ind = np.random.choice(len(pool),size=df.shape[0],replace=False)
+        test_now = np.nanmean(pool[ind])
+        ctrl_now = np.nanmean(np.delete(pool, ind))
+        diff_now = test_now - ctrl_now
+        diff.append(diff_now)
+    if alternative=='two-sided':
+        p_val = [1 if (abs(diff_now)>=abs(diff_observed)) else 0 for diff_now in diff]
+    elif alternative=='greater':
+        p_val = [1 if (diff_now>=diff_observed) else 0 for diff_now in diff]
+    elif alternative=='less':
+        p_val = [1 if (diff_now<=diff_observed) else 0 for diff_now in diff]
+    return np.sum(p_val)/len(p_val)
+    
+    
+# permutation test for equavelence of two sample median (simulated)
+
+def permutation_test_median_diff(df, test, ctrl, alternative='two-sided', iteration=2000):
+    
+    diff = []
+    test_medain = df[test].median()  
+    ctrl_medain = df[ctrl].median()
+    diff_observed = test_medain - ctrl_medain
+    pool = pd.concat([pd.Series(df[test]), pd.Series(df[ctrl])]).values
+    for i in range(iteration):
+        ind = np.random.choice(len(pool),size=df.shape[0],replace=False)
+        test_now = np.nanmedian(pool[ind])
+        ctrl_now = np.nanmedian(np.delete(pool, ind))
+        diff_now = test_now - ctrl_now
+        diff.append(diff_now)
+    if alternative=='two-sided':
+        p_val = [1 if (abs(diff_now)>=abs(diff_observed)) else 0 for diff_now in diff]
+    elif alternative=='greater':
+        p_val = [1 if (diff_now>=diff_observed) else 0 for diff_now in diff]
+    elif alternative=='less':
+        p_val = [1 if (diff_now<=diff_observed) else 0 for diff_now in diff]
+    return np.sum(p_val)/len(p_val)
