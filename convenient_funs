@@ -1,0 +1,221 @@
+# convenient functions
+
+# descriptive tables for a list of categorical variables
+def cat_table(df, cat_list):
+    '''
+    Input:
+    df: data frame
+    cat_list: a list of categorical variables 
+
+    Output:
+    A dataframe contain the frequency tables for all variables in cat_list
+    '''
+    res = pd.DataFrame()
+    for cat in cat_list:
+        temp = df.groupby(by=[cat], dropna = False).size().to_frame().reset_index().rename(columns={0:'N', cat:'Level'}) \
+              .sort_values(by = ['N'], ascending = [False])
+        temp['Percentage']=temp['N']*100/float(temp['N'].sum())
+        temp['Variable'] = cat
+        temp = temp [['Variable', 'Level', 'N', 'Percentage']]
+        res = res.append(temp)    
+    return res
+
+# descriptive tables for a list of continuous variables
+
+def con_table(df, con_list):
+    '''
+    Input:
+    df: data frame
+    con_list: a list of continuous variables 
+
+    Output:
+    A dataframe contain the summary statistics for all variables in con_list
+    '''
+    res = df[con_list].describe()
+    res = res.T.reset_index()
+    res['Variable'] = res['index']
+    res.drop(columns = ['index'], inplace = True)
+    res.rename(columns = {'25%':'q25', '50%':'q50', '75%':'q75'}, inplace = True)
+    res = res[['Variable','count', 'mean', 'std', 'min', 'q25', 'q50', 'q75', 'max']]   
+    
+    res = res.reset_index(drop=True).style.format({'count': '{}', 
+                                                   'mean': '{:.2f}',
+                                                   'min': '{:.2f}',
+                                                   'q25': '{:.2f}',
+                                                   'q50': '{:.2f}',
+                                                   'q75': '{:.2f}',
+                                                   'max': '{:.2f}'})
+
+    return res
+
+# permutation test for equavelence of two sample median (simulated)
+
+def permutation_test_median_diff(test, ctrl, alternative='two-sided', iteration=2000):
+    '''
+    Input:
+    test: test group data frame
+    ctrl: ctrl group data frame
+    alternative: "two-sided", "greater", or "less"
+    iteration: permutation test number of iterations simuated 
+
+    Output:
+    p-value from the permutation test comparing two sample median
+    '''
+    
+    diff = []
+    test_median = np.nanmedian(test)  
+    ctrl_median = np.nanmedian(ctrl)
+    diff_observed = test_median - ctrl_median
+    pool = np.concatenate((test, ctrl), axis=0)
+    for i in range(iteration):
+        ind = np.random.choice(len(pool),size=len(test),replace=False)
+        test_now = np.nanmedian(pool[ind])
+        ctrl_now = np.nanmedian(np.delete(pool, ind))
+        diff_now = test_now - ctrl_now
+        diff.append(diff_now)
+    if alternative=='two-sided':
+        p_val = [1 if (abs(diff_now)>=abs(diff_observed)) else 0 for diff_now in diff]
+    elif alternative=='greater':
+        p_val = [1 if (diff_now>=diff_observed) else 0 for diff_now in diff]
+    elif alternative=='less':
+        p_val = [1 if (diff_now<=diff_observed) else 0 for diff_now in diff]
+    return np.sum(p_val)/len(p_val)
+
+
+# permutation test for equavelence of two sample mean (simulated)
+def permutation_test_mean_diff(test, ctrl, alternative='two-sided', iteration=2000):
+    '''
+    Input:
+    test: test group data frame
+    ctrl: ctrl group data frame
+    alternative: "two-sided", "greater", or "less"
+    iteration: permutation test number of iterations simuated 
+
+    Output:
+    p-value from the permutation test comparing two sample mean
+    '''
+    
+    diff = []
+    test_mean = np.nanmean(test)  
+    ctrl_mean = np.nanmean(ctrl)
+    diff_observed = test_mean - ctrl_mean
+    pool = np.concatenate((test, ctrl), axis=0)
+    for i in range(iteration):
+        ind = np.random.choice(len(pool),size=len(test),replace=False)
+        test_now = np.nanmean(pool[ind])
+        ctrl_now = np.nanmean(np.delete(pool, ind))
+        diff_now = test_now - ctrl_now
+        diff.append(diff_now)
+    if alternative=='two-sided':
+        p_val = [1 if (abs(diff_now)>=abs(diff_observed)) else 0 for diff_now in diff]
+    elif alternative=='greater':
+        p_val = [1 if (diff_now>=diff_observed) else 0 for diff_now in diff]
+    elif alternative=='less':
+        p_val = [1 if (diff_now<=diff_observed) else 0 for diff_now in diff]
+    return np.sum(p_val)/len(p_val)
+
+
+# generalized t-test based on scipy.stats.ttest_ind
+def ttest_ind2(x,y,alternative='two.sided',equal_var=False):
+    '''
+    Input:
+    x: treatment group, array-like
+    y: control group, array-like
+    alternative: "two-sided", "greater", or "less"
+    equal_var: True for Weltch-test
+
+    Output:
+    Tuple: (t-statistic, p-value)
+    '''
+    t,pval = stats.ttest_ind(a=x,b=y,equal_var=equal_var)
+    if alternative=='greater':
+        pval = (t>0)*pval/2 +(t<0)*(1-pval/2)
+    elif alternative=='less':
+        pval = (t<0)*pval/2 +(t>0)*(1-pval/2)
+    return (t,pval)
+
+
+# Descriptive table for categorical features (contingency table and chisq independent test)
+
+def desc_table_cat(df, cov_list, out_var, out_var_level, perc=None):
+    '''
+    Input:
+    df: data frame
+    cov_list: list of categorical features
+    out_var: dependent variable
+    out_var_level: order of level for comparison in out_var, e.g., ['treatment', 'control']
+    perc: None, 'col', or 'row'
+
+    Output:
+    A dataframe contain the contingency table for out_var vs all categorical variables in cov_list
+    '''
+    
+    desc_table = pd.DataFrame()
+    # replace None with 'missing'
+    df = df.replace(np.nan, 'missing', regex=True)
+    for feature in cov_list:
+        if perc is None:
+            now = pd.crosstab(df[feature], df[out_var])
+        elif(perc=='col'):
+            now = pd.crosstab(df[feature], df[out_var]).apply(lambda r: r.astype(str) + ' (' + (round(r/r.sum()*100,2)).astype(str) + '%)', axis=0)
+        elif(perc=='row'):
+            now = pd.crosstab(df[feature], df[out_var]).apply(lambda r: r.astype(str) + ' (' + (round(r/r.sum()*100,2)).astype(str) + '%)', axis=1)
+        chi2, pval, dof, ex = stats.chi2_contingency(pd.crosstab(df[feature], df[out_var]).values, correction=False)
+        now['Chisq_pval'] = pval
+        now['Variable'] = feature
+        now['Level'] = now.index
+        desc_table = desc_table.append(now)
+    desc_table = desc_table.reset_index()    
+    desc_table = desc_table[['Variable', 'Level', out_var_level[0], out_var_level[1], 'Chisq_pval']]  
+    desc_table = desc_table.reset_index(drop=True).style.format({'Chisq_pval': '{:.4f}'})
+    return desc_table
+
+# Descriptive table for continuous features (summary statistics and t-test/permutation test)
+
+def desc_table_con(df, cov_list, out_var, out_var_level, alternative='two.sided', equal_var=False, permutate=False, metric='mean', iteration=2000):
+    
+    '''
+    Input:
+    df: data frame
+    cov_list: list of continuous features
+    out_var: dependent variable
+    out_var_level: order of level for comparison in out_var, e.g., ['treatment', 'control']
+    alternative: "two-sided", "greater", or "less"
+    equal_var: True for Weltch's t-test, for permutate=False only
+    permutate: whether use permutation test instead of t-test
+    metric: 'mean' or 'median', for permutate=False only
+    iteration: permutation test number of iterations simuated, for permutate=False only
+
+    Output:
+    A dataframe contain the descriptive statistics for out_var vs all continuous variables in cov_list
+    '''
+    desc_table = pd.DataFrame()
+    for feature in cov_list:
+        # summary statistics
+        now = pd.DataFrame(df.groupby(out_var)[feature].describe())
+        if permutate==False:
+            # t-test
+            tstat, pval = ttest_ind2(df[feature][df[out_var]==out_var_level[0]],df[feature][df[out_var]==out_var_level[1]], alternative, equal_var)
+        else:
+            if metric=='mean':
+                pval = permutation_test_mean_diff(df[feature][df[out_var]==out_var_level[0]], df[feature][df[out_var]==out_var_level[1]], alternative, iteration)
+            elif metric == 'median':
+                pval = permutation_test_median_diff(df[feature][df[out_var]==out_var_level[0]], df[feature][df[out_var]==out_var_level[1]], alternative, iteration)
+                
+        now['pval'] = pval
+        now['Variable'] = feature
+        now['Level'] = now.index
+        desc_table = desc_table.append(now)  
+    desc_table = desc_table.reset_index(drop=True)
+    desc_table.rename(columns = {'25%':'q25', '50%':'q50', '75%':'q75'}, inplace = True)
+    desc_table = desc_table[['Variable', 'Level', 'count', 'mean', 'std', 'min', 'q25', 'q50', 'q75', 'max', 'pval']]   
+    
+    desc_table = desc_table.reset_index(drop=True).style.format({'count': '{}', 
+                                                   'mean': '{:.2f}',
+                                                   'min': '{:.2f}',
+                                                   'q25': '{:.2f}',
+                                                   'q50': '{:.2f}',
+                                                   'q75': '{:.2f}',
+                                                   'max': '{:.2f}',
+                                                   'pval': '{:.4f}'})
+    return desc_table
