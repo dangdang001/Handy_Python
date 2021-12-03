@@ -7,3 +7,17 @@
 df[['col_1','col_2']] = df.apply(lambda row: my_fun(row['var1'], row['var2'], ...), axis = 1, result_type = 'expand')
 
 
+# Situation: reshape pandas dataframe
+
+## long to wide
+df_reshaped = pd.pivot(df, 
+         values=['total_count','positive_count'], 
+         index=['study_id', 'bls_id', 'question_type'],
+         columns=['treatment'])
+
+df_reshaped.columns = [ '_'.join([str(c) for c in c_list]) for c_list in df_reshaped.columns.values] #flat the multi-index df
+df_reshaped = df_reshaped.reset_index()
+
+## wide to long 
+df_reshaped = pd.wide_to_long(df[['id', 'question_type', 'positive_rate_exposed', 'positive_rate_control']], 
+                stubnames=['positive_rate'], suffix=r'\w+', sep='_', i=['id', 'question_type'], j='group').reset_index()
